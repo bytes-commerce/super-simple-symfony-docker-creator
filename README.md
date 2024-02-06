@@ -23,7 +23,7 @@ To create an instance with MariaDB (latest), Nginx (latest), PHP 8.2-fpm and por
 command:
 
 ```bash
-symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm
+symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm --port 5555
 ```
 
 To create an instance with MySQL (latest), Apache (latest), PHP 7.4-fpm and port 5555, you can run the following
