@@ -9,7 +9,7 @@ new Symfony projects with Docker for customers.
 To install this script, you can run the following command:
 
 ```bash
-curl -O https://raw.githubusercontent.com/nopenopenope/symfony-docker-creator/master/sssdc.sh
+curl -O https://raw.githubusercontent.com/nopenopenope/super-simple-symfony-docker-creator/master/sssdc.sh
 chmod +x sssdc.sh
 mv sssdc.sh /usr/local/bin/symfony-docker-creator
 ```
