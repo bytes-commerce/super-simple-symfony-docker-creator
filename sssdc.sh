@@ -2,6 +2,22 @@
 
 set -e
 
+function usage() {
+  echo "Usage: symfony-docker-creator [options]"
+  echo "Options:"
+  echo "  --webserver <webserver>  The webserver to use. Default is apache."
+  echo "  --php <php>              The PHP image to use. Default is php:apache."
+  echo "  --port <port>            The port to use for the webserver. Default is 1337."
+  echo "  --port-https <port>      The port to use for the webserver. Default is 1338."
+  echo "  --database <database>    The database to use. Default is mariadb:11.2.2."
+  echo "  --domain <domain>        The domain to use. Default is www.symfony.local."
+  echo "  --xdebug                 Enable xdebug. Default is true."
+  echo "  --symfony <version>      The Symfony version to use. Default is 7.0.*."
+  echo "  --force                  Force deletion of existing files."
+  echo "  --install                Install this script to /usr/local/bin. Execute with sudo!."
+  exit 1
+}
+
 webserver="apache"
 php="php:apache"
 domain="www.symfony.local"
@@ -56,6 +72,12 @@ while [ "$#" -gt 0 ]; do
         --force)
             force=true
             shift 1
+            ;;
+        --install)
+            sudo chmod +x sssdc.sh
+            sudo cp sssdc.sh /usr/local/bin/symfony-docker-creator
+            echo "Installed. You can use this script with symfony-docker-creator now."
+            exit 1
             ;;
         *)
             usage
