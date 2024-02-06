@@ -26,11 +26,11 @@ command:
 symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm --port 5555
 ```
 
-To create an instance with MySQL (latest), Apache (latest), PHP 7.4-fpm and port 5555, you can run the following
+To create an instance with MySQL (latest), Apache, PHP 7.4-fpm and port 5555, you can run the following
 command:
 
 ```bash
-symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm --database mysql:latest
+symfony-docker-creator --php php:7.4-apache --database mysql:latest --port 5555
 ```
 
 ## Options
