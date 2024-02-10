@@ -138,7 +138,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
 		libzip-dev \\
     unzip \\
     dnsutils \\
-    curl
+    curl \\
+    openssl
 
 RUN docker-php-ext-enable opcache
 RUN docker-php-ext-configure zip
@@ -387,6 +388,7 @@ EOF
           mkdir -p ./docker/php/etc/
           touch ./docker/php/etc/apache.conf
           cat <<EOF >> ./docker/php/etc/apache.conf
+SetEnvIf X-Forwarded-Proto https HTTPS=on
 <VirtualHost *:80>
         ServerName $localDomain
         ServerAdmin admin@localhost
@@ -407,16 +409,45 @@ EOF
         ErrorLog ${APACHE_LOG_DIR}/error.log
         CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+<VirtualHost *:443>
+    ServerName $localDomain
+    RewriteEngine on
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+    DocumentRoot /var/www/html/public
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/selfsigned.crt
+    SSLCertificateKeyFile /etc/ssl/certs/selfsigned.key
+    RequestHeader set X-Forwarded-Proto "https"
+    Header always set Strict-Transport-Security "max-age=15768000"
+</VirtualHost>
+
+SSLProtocol all -SSLv3
+SSLCipherSuite ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
+SSLHonorCipherOrder on
+SSLUseStapling on
+SSLStaplingResponderTimeout 5
+SSLStaplingReturnResponderErrors off
+SSLStaplingCache shmcb:/var/run/ocsp(128000)
 EOF
           cat <<EOF >> ./docker/php/Dockerfile
+RUN openssl req -x509 \\
+  -nodes \\
+  -days 365 \\
+  -subj "/C=CA/ST=QC/O=Company, Inc./CN=$localDomain" \\
+  -addext "subjectAltName=DNS:$localDomain" \\
+  -newkey rsa:4096 \\
+  -sha256 \\
+  -keyout /etc/ssl/certs/selfsigned.key \\
+  -out /etc/ssl/certs/selfsigned.crt;
+
 COPY ./etc/apache.conf /etc/apache2/sites-enabled/000-default.conf
 ENV USERNAME=www-data
 ENV GROUPNAME=www-data
 RUN groupmod -g 1000 www-data
-RUN a2enmod rewrite
-RUN a2enmod headers
-RUN a2enmod ssl
-
+RUN a2enmod rewrite \\
+  && a2enmod headers \\
+  && a2enmod socache_shmcb
 EOF
           cat <<EOF >> docker-compose.yml
     php:
@@ -430,6 +461,8 @@ EOF
         - "$port_https:443"
       restart: always
 EOF
+        # remove the webserver folder, its not going to be used in the apache package.
+        rm -rf ./docker/webserver
         fi
     fi
 
@@ -503,8 +536,8 @@ sleep 3
 curl -s http://localhost:"$port_http" | grep "Setup okay, installing Symfony now." || (echo "The curl request to localhost did not return the expected response. Something went wrong." && exit 1)
 rm -rf src/public/index.php
 docker compose exec php bash -c "yes | composer create-project symfony/skeleton:$symfony dummy && mv dummy/* ./ && mv dummy/.* ./ && rm -rf dummy"
-docker compose exec php bash -c "yes | composer require symfony/webpack-encore-bundle symfony/orm-pack symfony/validator symfony/asset"
-docker compose exec php bash -c "yes | composer require symfony/maker-bundle webmozart/assert --dev"
+docker compose exec php bash -c "yes | composer require symfony/apache-pack symfony/security-bundle symfony/uid symfony/translation symfony/config symfony/web-link symfony/yaml twig/extra-bundle "
+docker compose exec php bash -c "yes | composer require symfony/maker-bundle webmozart/assert phpunit/phpunit phpstan/phpstan phpstan/phpstan-webmozart-assert symplify/easy-coding-standard symfony/web-profiler-bundle symfony/debug-bundle doctrine/doctrine-fixtures-bundle seec/phpunit-consecutive-params --dev"
 docker compose exec php bash -c "chown -R 1000:1000 ."
 }
 
