@@ -66,7 +66,8 @@ symfony-docker-creator --php php:7.4-apache --database mysql:latest --port 5555
 
 ## Supported Webservers
 
-Currently, only NGINX and Apache are supported. Nginx has automatic SSL certificate generation onboard.
+Currently, only NGINX and Apache are supported. Both systems automatically create HTTPS certificates for you for the
+provided domain. :sparkle: :-)
 
 ## Contribution
 

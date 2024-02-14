@@ -2,6 +2,8 @@
 
 set -e
 
+_self="${0##*/}"
+
 function usage() {
   echo "Usage: symfony-docker-creator [options]"
   echo "Options:"
@@ -34,6 +36,13 @@ then
     echo "docker could not be found. Please install Docker first."
     exit 1
 fi
+
+scriptDir=$(realpath $(dirname $0))
+shaExisting=sha256sum $scriptDir/$_self
+
+echo $scriptDir/$_self
+echo shaExisting
+
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
