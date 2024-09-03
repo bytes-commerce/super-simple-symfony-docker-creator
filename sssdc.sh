@@ -38,7 +38,7 @@ then
 fi
 
 scriptDir=$(realpath $(dirname $0))
-shaExisting=sha256sum $scriptDir/$_self
+shaExisting=sha256sum
 
 echo $scriptDir/$_self
 echo shaExisting
