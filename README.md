@@ -23,14 +23,14 @@ To create an instance with MariaDB (latest), Nginx (latest), PHP 8.2-fpm and por
 command:
 
 ```bash
-symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm --port 5555
+symfony-docker-creator --webserver nginx:1.25.3-alpine --php php:8.3-fpm --port-http 5555 --port-https 5556 --db-port 3317
 ```
 
 To create an instance with MySQL (latest), Apache, PHP 7.4-fpm and port 5555, you can run the following
 command:
 
 ```bash
-symfony-docker-creator --php php:7.4-apache --database mysql:latest --port 5555
+symfony-docker-creator --php php:7.4-apache --webserver apache --database mysql:latest --port-http 5555 --port-https 5556 --db-port 3317
 ```
 
 ## Options
@@ -41,11 +41,14 @@ symfony-docker-creator --php php:7.4-apache --database mysql:latest --port 5555
 - `--php <version>`
     - Sets the PHP version to use. Replace `<version>` with the desired PHP version number (e.g., 7.4, 8.0).
 
-- `--port <port_http>`
+- `--port-http <port_http>`
     - Defines the HTTP port to use. Replace `<port_http>` with the port number for HTTP traffic (e.g., 80).
 
 - `--port-https <port_https>`
     - Defines the HTTPS port to use. Replace `<port_https>` with the port number for HTTPS traffic (e.g., 443).
+
+- `--db-port <port>`
+    - Sets the database port. Replace `<port>` with the port number for the database (e.g., 3306).
 
 - `--database <database>`
     - Specifies the database to use. Replace `<database>` with the name of your database (e.g., mysql, postgresql).
