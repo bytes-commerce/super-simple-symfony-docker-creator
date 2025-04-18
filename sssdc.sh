@@ -173,7 +173,13 @@ fi
 cat >> "$DOCKER_DIR/php/Dockerfile" <<EOF
 
 # Enable Apache modules
-RUN a2enmod rewrite headers ssl socache_shmcb
+ENV USERNAME=www-data
+ENV GROUPNAME=www-data
+RUN groupmod -g 1000 www-data
+RUN a2enmod rewrite \
+  && a2enmod headers \
+  && a2enmod socache_shmcb \
+  && a2enmod ssl
 
 # Copy Apache vhost configuration
 COPY etc/apache.conf /etc/apache2/sites-enabled/000-default.conf
@@ -185,6 +191,9 @@ WORKDIR /var/www/html
 
 # SSL certificates (self-signed)
 RUN mkdir -p /etc/ssl/private /etc/ssl/certs
+
+RUN echo 'alias export-translations="php bin/console translation:extract --format=yaml --force de"' >> ~/.bashrc
+
 EOF
 # Generate cert for PHP (apache)
 generate_ssl "$DOCKER_DIR/php" "selfsigned"
@@ -318,18 +327,31 @@ if [ "$WEBSERVER" = "apache" ]; then
   ServerName $DOMAIN
   DocumentRoot /var/www/html/public
   <Directory /var/www/html/public>
-    AllowOverride All
-    Require all granted
+      AllowOverride None
+      Order Allow,Deny
+      Allow from All
+      <IfModule mod_rewrite.c>
+          RewriteEngine On
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteRule ^(.*)$ index.php [QSA,L]
+      </IfModule>
   </Directory>
+
+  ErrorLog /error.log
+  CustomLog /access.log combined
 </VirtualHost>
 
 <VirtualHost *:443>
   ServerName $DOMAIN
   DocumentRoot /var/www/html/public
-  SSLEngine on
+  Header always set Strict-Transport-Security "max-age=15768000"
+  RequestHeader set X-Forwarded-Proto "https"
+  RewriteCond %{HTTP:Authorization} ^(.*)
+  RewriteEngine on
+  RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
   SSLCertificateFile /etc/ssl/certs/selfsigned.crt
   SSLCertificateKeyFile /etc/ssl/private/selfsigned.key
-  Header always set Strict-Transport-Security "max-age=15768000"
+  SSLEngine on
 </VirtualHost>
 EOF
 fi
@@ -421,14 +443,17 @@ sleep 5
 # Create Symfony skeleton
 if ! curl -fs "http://localhost:$HTTP_PORT" | grep -q "Welcome to Symfony"; then
   log "Installing Symfony $SYMFONY_VERSION..."
-  docker compose exec php bash -lc \
-    "composer create-project symfony/skeleton:$SYMFONY_VERSION . --no-interaction"
+  docker compose exec php bash -lc "yes | composer create-project symfony/skeleton:$SYMFONY_VERSION ."
   log "Installing common packages"
   docker compose exec php bash -lc \
-    "composer require webmozart/assert symfony/apache-pack symfony/security-bundle symfony/uid symfony/translation symfony/config symfony/web-link symfony/yaml twig/extra-bundle easycorp/easyadmin-bundle --no-interaction"
+    "yes | composer require webmozart/assert symfony/apache-pack doctrine/orm doctrine/doctrine-migrations-bundle doctrine/doctrine-bundle symfony/html-sanitizer symfony/runtime symfony/rate-limiter symfony/property-access symfony/validator symfony/property-info symfony/dotenv symfony/security-bundle symfony/uid symfony/translation symfony/config symfony/web-link symfony/yaml twig/extra-bundle easycorp/easyadmin-bundle twig/twig symfony/expression-language symfony/cache symfony/framework-bundle symfony/security-bundle symfony/twig-bundle symfony/yaml symfony/translation"
   log "Installing Dev packages"
   docker compose exec php bash -lc \
-    "composer require symfony/maker-bundle phpunit/phpunit phpstan/phpstan phpstan/phpstan-webmozart-assert symplify/easy-coding-standard symfony/web-profiler-bundle symfony/debug-bundle doctrine/doctrine-fixtures-bundle seec/phpunit-consecutive-params --dev --no-interaction"
+    "yes | composer require symfony/profiler-pack symfony/maker-bundle phpunit/phpunit phpstan/phpstan phpstan/phpstan-webmozart-assert symplify/easy-coding-standard symfony/web-profiler-bundle symfony/debug-bundle doctrine/doctrine-fixtures-bundle seec/phpunit-consecutive-params --dev --no-interaction"
+  if [[ "$WEBSERVER" == "apache" ]]; then
+    docker compose exec php bash -lc "yes | composer remove symfony/apache-pack"
+    docker compose exec php bash -lc "yes | composer require symfony/apache-pack"
+  fi
 fi
 
 echo "Symfony Docker setup complete! Browse to https://localhost:$HTTPS_PORT"

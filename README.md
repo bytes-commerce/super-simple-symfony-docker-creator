@@ -67,6 +67,16 @@ symfony-docker-creator --php php:7.4-apache --webserver apache --database mysql:
 
 **Note**: You have to adapt your `/etc/hosts` file manually to the point of your domain.
 
+## Known bugs
+
+Somehow, the recipe for apache-pack is not correctly generated when using `--webserver apache`. 
+
+You can easily generate the file yourself when doing the following after installing the project:
+```bash
+    docker compose exec php bash -lc "composer remove symfony/apache-pack"
+    docker compose exec php bash -lc "composer require symfony/apache-pack"
+```
+
 ## Supported Webservers
 
 Currently, only NGINX and Apache are supported. Both systems automatically create HTTPS certificates for you for the
